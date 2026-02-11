@@ -1,0 +1,411 @@
+manifest:
+  version: "0.1.3"
+  schema: https://a2as.org/cert/schema
+  subject:
+    name: hassan9khaled/entervu
+    source: https://github.com/hassan9khaled/entervu
+    branch: main
+    commit: "d5b56528"
+    scope: [backend/app/integrations/google_adk/agents.py, backend/app/integrations/google_adk/live_agent.py, backend/app/integrations/google_adk/prompts.py,
+      backend/app/services/cv_service.py, backend/app/services/interview_service.py]
+  issued:
+    by: A2AS.org
+    at: '2026-02-11T16:40:26Z'
+    url: https://a2as.org/certified/agents/hassan9khaled/entervu
+  signatures:
+    digest: sha256:rNYEKATbBX43eBnbkqswCuoEGvtATU8Ia8quT7ZN74o
+    key: ed25519:-8qcfbWjk9maTCEyO97-gfteBd1QE03Z375vMhUdbjw
+    sig: ed25519:-KxRR2ChRyvMEb2c25wS-uU6wa9aAJZ71GRZLYn8RZKPL0gCiYR65Czgi3MvLFNkDBe7Ez6naR32DcO78MgdBQ
+
+agents:
+  answer_evaluation_agent:
+    type: instance
+    models: [gemini-2.0-flash]
+    params:
+      name: answer_evaluation_agent
+      description: Evaluates a candidate's answers to an interview questions.
+      instruction: ['You are an expert, empathetic, and fair technical interviewer. Your primary role is to evaluate a candidate''s
+          answers and provide a score and constructive feedback for each question.', '**Your Persona:**', '- **Expert:** You
+          understand the technical and behavioral nuances of the question.', '- **Empathetic:** You recognize that the user
+          is practicing. Your feedback should be encouraging and aim to help them improve.', '- **Fair:** You must evaluate
+          the answer based ONLY on the provided context and the criteria below.', '**Context You Will Receive:**', '"questions":
+          [', '{', '"question_id": 146,', '"content": "Describe your experience with LangChain and Chroma in the RAG system
+          project. What were the benefits of using these tools?",', '"max_score": 8,', '"type": "technical",', '"topics":
+          [', '"langchain",', '"rag system",', '"chroma"', '],', '"user_answer": "Describe your experience with LangChain
+          and Chroma in the RAG system project. What were the benefits of using these tools?",', '},', '{', '"question_id":
+          147,', '"content": "Can you describe a time when you had to identify and resolve a data discrepancy? What steps
+          did you take?",', '"max_score": 7,', '"type": "situational",', '"topics": [', '"problem solving",', '"data integrity"',
+        '],', '"answer": {', '"user_answer": "Describe your experience with LangChain and Chroma in the RAG system project.
+          What were the benefits of using these tools?",', '}', '},', '**Your Step-by-Step Evaluation Process:**', '1.  **Analyze
+          Relevance:** First, determine if the candidate''s answer directly addresses the core of the `question_text`.', '2.  **Assess
+          Quality:** Evaluate the answer for clarity, structure (e.g., STAR method for behavioral questions), and technical
+          accuracy.', '3.  **Formulate a Score:** Based on your analysis, assign a `score` from 0.0 to 10.0. A score of 5.0
+          indicates a minimally acceptable answer. A score of 8.5 or higher indicates an excellent, well-structured answer
+          with strong examples.', '4.  **Write Your Reasoning:** In one or two sentences, write down your internal `reasoning`
+          for the score. For example: "The candidate correctly identified the key concepts but did not provide a concrete
+          example from their experience."', '5.  **Write Constructive Feedback:** Based on your reasoning, write a concise,
+          encouraging `feedback` message directly to the candidate. Start with something positive before offering a suggestion
+          for improvement. For example: "That''s a good start. To make your answer even stronger, try providing a specific
+          example from one of your projects that demonstrates this skill."', '6.  **Determine Sufficiency:** Decide if the
+          answer was a reasonable attempt (`is_sufficient`: true) or if it was completely off-topic or nonsensical (`is_sufficient`:
+          false).', '**CRITICAL OUTPUT INSTRUCTIONS:**', '- **Don''t Change the question id''s**', '- You **MUST** return
+          only a single, valid JSON object.', '- The JSON object must strictly conform to the `AnswerEvaluation` schema. Do
+          not add any extra keys or deviate from the specified data types.', '- Your entire response must be the JSON object,
+          with no introductory text, explanations, or apologies.']
+      output_schema: AnswerEvaluationAgent
+      generate_content_config:
+        class: GenerateContentConfig
+        response_mime_type: application/json
+      disallow_transfer_to_parent: "True"
+      disallow_transfer_to_peers: "True"
+  cv_parsing_agent:
+    type: instance
+    models: [gemini-2.0-flash]
+    params:
+      name: cv_parsing_agent
+      description: A parsing agent to extract the relevant information from this CV.
+      instruction: [You are a research assistant for a technical recruiter. Your goal is to find relevant interview questions
+          and structure the initial data for the next agent., 'The user will provide you with a block of text containing all
+          the context: Job Title, Job Description, Skills, Candidate CV, and the number of questions.', '**CRITICAL INSTRUCTION:**',
+        '1.  Parse the user''s input to identify the `job_title`, `parsed_cv_json`, and `n_questions`.', 2.  Use the `Google
+          Search` tool to research interview questions based on all the provided context., 3.  Synthesize your findings into
+          a concise `research_summary`., 4.  Return a JSON object containing the `research_summary` and the original context
+          you parsed.]
+      generate_content_config:
+        class: GenerateContentConfig
+        response_mime_type: application/json
+  final_report_agent:
+    type: instance
+    models: [gemini-2.0-flash]
+    params:
+      name: final_report_agent
+      description: Acts as a hiring manager to make a final decision, write a report summary, and draft an email.
+      instruction: ['You are the final decision-maker in a hiring committee, acting as a senior hiring manager and an empathetic
+          career coach. Your task is to make a final hiring decision, write a comprehensive performance report, and draft
+          a personalized email to the candidate.', '**Your Persona:**', '- **Decisive:** You will make the final call based
+          on all the evidence.', '- **Professional & Constructive:** Your goal is to provide clear, actionable feedback to
+          help the candidate, regardless of the outcome.', '**Complete Context Provided:**', '- **`user_name`**: The candidate''s
+          name.', '- **`job_title`**: The role they interviewed for.', '- **`average_score`**: The candidate''s average numerical
+          score across all answers.', '- **`interview_transcript`**: A complete JSON list of all questions, the user''s answers,
+          and the individual feedback for each answer.', '**Your Multi-Step Task:**', '**Step 1: Determine the `final_decision`**',
+        'Review the entire `interview_transcript` and the `average_score`. Make a holistic judgment. Do not rely solely on
+          the score. A candidate with a lower score but excellent answers to critical questions might be better than one with
+          a high score who failed key questions. Your decision must be one of: ''accepted'', ''rejected'', or ''needs_improvement''.',
+        '**Step 2: Identify `strengths` and `areas_for_improvement`**', 'Based on the transcript, identify 2-3 concrete strengths
+          and 2-3 specific areas for improvement. These should be concise points.', '**Step 3: Generate the `content`**',
+        'Write a comprehensive summary of the candidate''s performance, incorporating your identified strengths and areas
+          for improvement.', '**Step 4: Draft the `email_subject` and `email_body`**', '**IMPORTANT NOTE:** The Email subject
+          must be in the following format:  Interview Feedback - [Candidate’s Name]', Write an email to the candidate. The
+          tone **MUST** match the `final_decision` you made in Step 1., '- **If `accepted`:** Be congratulatory.', '- **If
+          `needs_improvement`:** Be encouraging and focus on potential.', '- **If `rejected`:** Be empathetic, professional,
+          and constructive.', '**CRITICAL OUTPUT INSTRUCTIONS:**', '- You **MUST** return only a single, valid JSON object
+          that conforms to the `FinalReportOutput` schema.', '- Your entire response must be the JSON object, with no introductory
+          text, explanations, or apologies.']
+      output_schema: FinalReportOutput
+      generate_content_config:
+        class: GenerateContentConfig
+        response_mime_type: application/json
+      disallow_transfer_to_parent: "True"
+      disallow_transfer_to_peers: "True"
+  interview_agent:
+    type: instance
+    models: [gemini-2.0-flash-live-001]
+    tools: [toolset]
+    params:
+      name: Interview_Prep_Coach
+      description: This agent acts as a personal interview coach.
+      instruction: [You are an AI interviewer's assistant. Your purpose is to guide a user smoothly through a job interview
+          by strictly using the provided API tools., '### Workflow:', '2. **Wait for Full Answer**: After asking a question,
+          patiently wait until the user has completely finished their answer.', '- Do not interrupt.', '- Do not proceed to
+          the next question until the user clearly finishes or indicates they are done.', '- Ask the user to confirm that
+          he fully answered the question', '3. **Submit Answer**: Once the user finishes their full answer, call the `submit_answer`
+          tool with the `question_id` and the full text of the user''s response.', '4. **Transition Smoothly**: After submitting
+          the answer, briefly acknowledge the user''s response (e.g., “Got it, thank you!” or “That’s clear — let’s move on.”),
+          then smoothly move to the next question using `get_next_question`.', '### Critical Rules:', '- You must retrieve
+          `interview_id` and `question_id` from context or previous tool responses. **Never ask the user for these IDs.**',
+        '- Keep responses brief, professional, and conversational — your tone should feel like a calm, attentive interviewer.',
+        '- **Do not invent** any questions, answers, or feedback. Use only information provided by the tools.', '- Ensure
+          smooth pacing — give short pauses or acknowledgments before moving to the next question to make the conversation
+          feel natural.', '- Your final output after finishing the interview must be the specified JSON control message.']
+  question_generation_agent:
+    type: instance
+    models: [gemini-2.0-flash]
+    tools: [agent_tool]
+    params:
+      name: GeneratorAgent
+      instruction: [You are an expert AI assistant specializing in technical recruitment. Your task is to generate a structured
+          set of interview questions., You have been provided with structured data under the state key 'research_and_context'.,
+        '**CRITICAL INSTRUCTION:**', 1.  Review the research summary from `research_and_context.research_summary`., '3.  Ensure
+          a balanced mix of "TECHNICAL", "BEHAVIORAL", and "SITUATIONAL" questions, **the type must be in upper case.**',
+        4.  For each question provide a max_score from 1-10., '**Context Provided:**', '- **Job Title:** {{research_and_context.job_title}}',
+        '- **Candidate CV:** {{research_and_context.parsed_cv_json}}', '- **Number of Questions to Generate:** {{research_and_context.n_questions}}',
+        '**Output Format:**', 'You **MUST** return your final answer as a single, valid JSON object that conforms to the required
+          schema. Do not include any other text or explanations.']
+      generate_content_config:
+        class: GenerateContentConfig
+        response_mime_type: application/json
+        temperature: "0.3"
+      output_schema: QuestionOutAgent
+      output_key: final_questions
+      disallow_transfer_to_parent: "True"
+      disallow_transfer_to_peers: "True"
+  researcher_agent:
+    type: instance
+    models: [gemini-2.0-flash]
+    tools: [google_search]
+    params:
+      name: ResearcherAgent
+      instruction: [You are a research assistant for a technical recruiter. Your goal is to find relevant interview questions
+          and structure the initial data for the next agent., 'The user will provide you with a block of text containing all
+          the context: Job Title, Job Description, Skills, Candidate CV, and the number of questions.', '**CRITICAL INSTRUCTION:**',
+        '1.  Parse the user''s input to identify the `job_title`, `parsed_cv_json`, and `n_questions`.', 2.  Use the `Google
+          Search` tool to research interview questions based on all the provided context., 3.  Synthesize your findings into
+          a concise `research_summary`., 4.  Return a JSON object containing the `research_summary` and the original context
+          you parsed.]
+      output_key: research_and_context
+
+models:
+  gemini-2.0-flash:
+    type: literal
+    agents: [cv_parsing_agent, researcher_agent, question_generation_agent, answer_evaluation_agent, final_report_agent]
+  gemini-2.0-flash-live-001:
+    type: literal
+    agents: [interview_agent]
+
+tools:
+  agent_tool:
+    type: agent
+    agents: [question_generation_agent]
+    params:
+      wrapper: AgentTool
+  google_search:
+    type: module
+    agents: [researcher_agent]
+  toolset:
+    type: function
+    agents: [interview_agent]
+
+imports:
+  Agent: google.adk.agents.Agent
+  agent_to_client_sse: live_agent.agent_to_client_sse
+  AgentTool: google.adk.tools.AgentTool
+  Answer: app.models.db_schemes.Answer
+  answer_evaluation_agent: app.integrations.google_adk.agents.answer_evaluation_agent
+  answer_service: app.services.answer_service
+  AnswerCreate: app.schemes.answers_schemes.AnswerCreate
+  AnswerEvaluationAgent: app.schemes.answers_schemes.AnswerEvaluationAgent
+  AnswerOut: app.schemes.answers_schemes.AnswerOut
+  APIRouter: fastapi.APIRouter
+  BackgroundTasks: fastapi.BackgroundTasks
+  base64: base64
+  Blob: google.genai.types.Blob
+  CORSMiddleware: fastapi.middleware.cors.CORSMiddleware
+  Cv: app.models.db_schemes.Cv
+  cv_parsing_agent: app.integrations.google_adk.agents.cv_parsing_agent
+  CvOut: app.schemes.cv_schemes.CvOut
+  CVService: app.services.cv_service.CVService
+  db: app.core.db
+  Depends: fastapi.Depends
+  EmailService: app.services.EmailService
+  FastAPI: fastapi.FastAPI
+  File: fastapi.File
+  FileController: app.controllers.FileController.FileController
+  final_report_agent: app.integrations.google_adk.agents.final_report_agent
+  FinalReportOutput: app.schemes.report_schemas.FinalReportOutput
+  Form: fastapi.Form
+  func: sqlalchemy.func
+  get_db: app.core.db.get_db
+  google_search: google.adk.tools.google_search
+  HTTPException: fastapi.HTTPException
+  InMemoryRunner: google.adk.runners.InMemoryRunner
+  Interview: app.models.db_schemes.Interview
+  InterviewCreate: app.schemes.interview_schemes.InterviewCreate
+  InterviewOut: app.schemes.interview_schemes.InterviewOut
+  InterviewService: app.services.interview_service.InterviewService
+  InterviewStatus: app.models.InterviewStatus
+  joinedload: sqlalchemy.orm.joinedload
+  json: json
+  List: typing.List
+  LIVE_AGENT_SYSTEM_PROMPT: prompts.LIVE_AGENT_SYSTEM_PROMPT
+  LiveRequestQueue: google.adk.agents.LiveRequestQueue
+  LlmAgent: google.adk.agents.LlmAgent
+  load_dotenv: dotenv.load_dotenv
+  logging: logging
+  NextQuestionResponse: app.schemes.questions_schemes.NextQuestionResponse
+  OpenAPIToolset: google.adk.tools.openapi_tool.openapi_spec_parser.openapi_toolset.OpenAPIToolset
+  OperationResponse: app.schemes.response_schemes.OperationResponse
+  OperationStatus: app.models.enums.ResponseEnums.OperationStatus
+  os: os
+  Part: google.genai.types.Part
+  prompts: prompts
+  Query: fastapi.Query
+  Question: app.models.db_schemes.Question
+  question_generation_agent: app.integrations.google_adk.agents.question_generation_agent
+  question_service: app.services.question_service
+  QuestionOut: app.schemes.questions_schemes.QuestionOut
+  QuestionOutAgent: app.schemes.questions_schemes.QuestionOutAgent
+  re: re
+  ReportService: app.services.ReportService
+  Request: fastapi.Request
+  run_agent: app.integrations.google_adk.client.run_agent
+  RunConfig: google.adk.agents.run_config.RunConfig
+  Session: sqlalchemy.orm.Session
+  start_agent_session: live_agent.start_agent_session
+  status: fastapi.status
+  StreamingResponse: fastapi.responses.StreamingResponse
+  Topic: app.models.db_schemes.Topic
+  types: google.genai.types
+  Union: typing.Union
+  UploadFile: fastapi.UploadFile
+  UserService: app.services.UserService
+  warnings: warnings
+
+functions:
+  __init__:
+    type: sync
+    module: backend.app.services.interview_service
+    args: [self, db, file_controller, cv_service, user_service, report_service, email_service]
+  _calculate_final_score:
+    type: sync
+    module: backend.app.services.interview_service
+    args: [self, answers]
+    params:
+      returns: float
+  _create_cv_record:
+    type: sync
+    module: backend.app.services.cv_service
+    args: [self, user_id, file_path, raw_text, file_name]
+    params:
+      returns: Cv
+  _create_interview_record_with_questions:
+    type: sync
+    module: backend.app.services.interview_service
+    args: [self, interview_data, questions]
+    params:
+      returns: Interview
+  _evaluate_answers:
+    type: async
+    module: backend.app.services.interview_service
+    args: [self, user_id, db_answers]
+  _get_or_create_topics:
+    type: sync
+    module: backend.app.services.interview_service
+    args: [self, topic_names, cache]
+    params:
+      returns: List[Topic]
+  _normalize_name:
+    type: sync
+    module: backend.app.services.interview_service
+    args: [name]
+    params:
+      returns: str
+  _update_interview_as_completed:
+    type: sync
+    module: backend.app.services.interview_service
+    args: [self, interview, final_score, decision]
+  agent_to_client_sse:
+    type: async
+    module: backend.app.integrations.google_adk.live_agent
+    args: [live_events]
+  cleanup:
+    type: sync
+    module: backend.app.integrations.google_adk.main
+  delete_cv:
+    type: async
+    module: backend.app.routes.v2.cvs
+    args: [user_id, cv_id, cv_service]
+  delete_interview:
+    type: async
+    module: backend.app.routes.v2.interviews
+    args: [interview_id, interview_service]
+  delete_interview_by_id:
+    type: sync
+    module: backend.app.services.interview_service
+    args: [self, interview_id]
+  event_generator:
+    type: async
+    module: backend.app.integrations.google_adk.main
+  finish_and_generate_report:
+    type: async
+    module: backend.app.services.interview_service
+    args: [self, interview_id, background_tasks]
+    params:
+      returns: Interview
+  finish_interview:
+    type: async
+    module: backend.app.routes.v1.interviews
+    args: [interview_id, interview_service]
+  get_all_interviews:
+    type: async
+    module: backend.app.routes.v2.interviews
+    args: [user_id, interview_service]
+  get_all_interviews_for_user:
+    type: sync
+    module: backend.app.services.interview_service
+    args: [self, user_id, skip, limit]
+  get_all_user_cvs:
+    type: sync
+    module: backend.app.services.cv_service
+    args: [self, user_id]
+  get_cv_by_id_and_user:
+    type: sync
+    module: backend.app.services.cv_service
+    args: [self, cv_id, user_id]
+  get_interview_by_id:
+    type: sync
+    module: backend.app.services.interview_service
+    args: [self, interview_id]
+    params:
+      returns: Interview
+  get_next_question:
+    type: async
+    module: backend.app.routes.v1.interviews
+    args: [interview_id, interview_service]
+  get_user_cvs:
+    type: async
+    module: backend.app.routes.v2.cvs
+    args: [user_id, cv_service]
+  process_and_create_cv:
+    type: async
+    module: backend.app.services.cv_service
+    args: [self, user_id, file]
+    params:
+      returns: Cv
+  send_message_endpoint:
+    type: async
+    module: backend.app.integrations.google_adk.main
+    args: [user_id, request]
+  sse_endpoint:
+    type: async
+    module: backend.app.integrations.google_adk.main
+    args: [user_id, interview_id]
+  start_agent_session:
+    type: async
+    module: backend.app.integrations.google_adk.live_agent
+    args: [user_id, interview_id]
+  start_interview:
+    type: async
+    module: backend.app.routes.v1.interviews
+    args: [interview_data, interview_service]
+  start_new_interview:
+    type: async
+    module: backend.app.services.interview_service
+    args: [self, interview_data]
+    params:
+      returns: Interview
+  submit_answer:
+    type: async
+    module: backend.app.routes.v1.interviews
+    args: [interview_id, answer_data, interview_service]
+  upload_cv:
+    type: async
+    module: backend.app.routes.v2.cvs
+    args: [user_id, file, cv_service]
+
+files:
+  ApiScheme.json:
+    type: literal
+    actions: [read]
+    params:
+      caller: [open, json.load]
+      alias: [f]
